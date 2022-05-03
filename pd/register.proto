@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+option go_package = "./;pd";
+package pd;
+
+message Nodes {
+    repeated Node nodes = 1;
+}
+
+message Node {
+    Protocol protocol = 1;
+    string ip = 2;
+    uint32 port = 3;
+    map<string, string> options = 4;
+}
+
+message RegisterResponse {
+    uint32 code = 1;
+    string msg = 2;
+    map<string, string> data = 3;
+}
+
+enum Protocol {
+    TCP = 0;
+}
+
+service XRay {
+    rpc Register (Nodes) returns (RegisterResponse) {}
+}
