@@ -20,10 +20,16 @@ func (t *TcpProxy) Run(ctx context.Context) {
 
 // run source listener
 func (t *TcpProxy) runSourceTcpListener(ctx context.Context) {
+	portChan := ctx.Value(PortChanKey).(chan string)
 	if t.source == nil {
+		addr, err := net.ResolveTCPAddr("tcp", "0.0.0.0:0")
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
 		t.source = &pd.Node{}
 		t.source.Ip = "127.0.0.1"
-		t.source.Port = 8083
+		t.source.Port = uint32(addr.Port)
 	}
 	sourceHost := fmt.Sprintf("%s:%d", t.source.Ip, t.source.Port)
 	targetHost := fmt.Sprintf("%s:%d", t.target.Ip, t.target.Port)
@@ -34,7 +40,9 @@ func (t *TcpProxy) runSourceTcpListener(ctx context.Context) {
 	}
 	defer sourceListener.Close()
 
-	fmt.Printf("Proxy from %s to %s \n", sourceHost, targetHost)
+	portChan <- sourceListener.Addr().String()
+
+	fmt.Printf("Proxy from %s to %s \n", sourceListener.Addr().String(), targetHost)
 
 	for {
 		conn, err := sourceListener.Accept()

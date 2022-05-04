@@ -7,6 +7,12 @@ import (
 	"github.com/kiraqjx/x-ray/pd"
 )
 
+type StringKey string
+
+const (
+	PortChanKey StringKey = "port-channel"
+)
+
 type Proxy interface {
 	Run(ctx context.Context)
 }

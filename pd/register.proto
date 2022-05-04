@@ -17,7 +17,7 @@ message Node {
 message RegisterResponse {
     uint32 code = 1;
     string msg = 2;
-    map<string, string> data = 3;
+    map<uint32, string> data = 3;
 }
 
 enum Protocol {

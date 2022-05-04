@@ -2,18 +2,39 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"net"
+	"os"
 
+	"github.com/kiraqjx/x-ray/config"
 	"github.com/kiraqjx/x-ray/pd"
+	"gopkg.in/yaml.v3"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
+var clientConfigPath string
+
+var clientConfig config.ClientConfig
+
+func init() {
+	flag.StringVar(&clientConfigPath, "client-config", "../config/client-config.yaml", "the client config file path")
+	flag.Parse()
+	file, err := os.Open(clientConfigPath)
+	if err != nil {
+		panic(err)
+	}
+	decoder := yaml.NewDecoder(file)
+	err = decoder.Decode(&clientConfig)
+	if err != nil {
+		panic(err)
+	}
+}
+
 func main() {
-	serviceHost := "127.0.0.1:8081"
-	conn, err := grpc.Dial(serviceHost, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.Dial(clientConfig.GrpcServer.Host, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -22,8 +43,9 @@ func main() {
 	client := pd.NewXRayClient(conn)
 
 	node := &pd.Node{
-		Ip:   "127.0.0.1",
-		Port: 8082,
+		Protocol: pd.Protocol(clientConfig.ProxyHosts[0].Protocol),
+		Ip:       clientConfig.ProxyHosts[0].Host,
+		Port:     clientConfig.ProxyHosts[0].Port,
 	}
 
 	nodes := make([]*pd.Node, 1)
@@ -38,9 +60,9 @@ func main() {
 		return
 	}
 
-	fmt.Println(rsp)
+	printProxyInfo(rsp.Data)
 
-	listen, err := net.Listen("tcp", "127.0.0.1:8082")
+	listen, err := net.Listen("tcp", fmt.Sprintf("%s:%d", clientConfig.ProxyHosts[0].Host, clientConfig.ProxyHosts[0].Port))
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -60,4 +82,11 @@ func main() {
 func handleConn(conn net.Conn) {
 	fmt.Println("hello world")
 	conn.Close()
+}
+
+func printProxyInfo(data map[uint32]string) {
+	for key, value := range data {
+		fmt.Printf("%d -> %s", key, value)
+	}
+	fmt.Print("\n")
 }

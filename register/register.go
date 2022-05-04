@@ -20,17 +20,24 @@ func (r *Register) Register(ctx context.Context, req *pd.Nodes) (*pd.RegisterRes
 		}, nil
 	}
 
+	ports := make(map[uint32]string, len(req.Nodes))
 	for _, node := range req.Nodes {
-		proxy, err := proxy.NewProxy(nil, node)
+		proxyInstance, err := proxy.NewProxy(nil, node)
 		if err != nil {
 			fmt.Printf("proxy error - ip: %s ; port: %d", node.Ip, node.Port)
 			continue
 		}
-		go proxy.Run(ctx)
+		portChan := make(chan string)
+		ctx = context.WithValue(ctx, proxy.PortChanKey, portChan)
+		go proxyInstance.Run(ctx)
+
+		port := <-portChan
+		ports[node.Port] = port
 	}
 
 	return &pd.RegisterResponse{
 		Code: 0,
 		Msg:  "success",
+		Data: ports,
 	}, nil
 }
